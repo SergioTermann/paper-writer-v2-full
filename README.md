@@ -4,11 +4,18 @@ IEEE/SCI 论文分章节指导与写作生成 skill。用于撰写或指导 Abst
 
 ## Install for Codex
 
+In Codex, users can directly install this skill by pasting the repository URL:
+
+```
+给我安装 https://github.com/SergioTermann/paper-writer-v2-full 的 skill
+```
+
+Equivalent CLI command:
+
 ```bash
 python3 ~/.codex/skills/.system/skill-installer/scripts/install-skill-from-github.py \
-  --repo SergioTermann/paper-writer-v2-full \
+  --url https://github.com/SergioTermann/paper-writer-v2-full \
   --path . \
-  --name paper-writer-v2-full
 ```
 
 If `CODEX_HOME` is set, the skill is installed under `$CODEX_HOME/skills`.
