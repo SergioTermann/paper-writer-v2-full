@@ -1,23 +1,26 @@
 name: paper_writer_v2_full
-version: "2.4.0"
+version: "2.5.0"
 description: >
   IEEE/SCI论文分章节指导+写作生成技能。
   调整1：不再设置独立Related Work章节，全部前人研究、参考文献综述直接整合在Introduction内部。
   调整2：experimental_setup 开头增加现实挑战描述，实验部分先呼应论文提出的真实问题与挑战，再展开数据集、指标、基线、训练配置，与Introduction形成叙事闭环。
   调整3：若用户指定“按照本工程已经完成的实验结果撰写论文”，必须先读取当前工程中的实验结果、表格、日志或报告，并严格依据这些已完成实验撰写正文；不得虚构或补全缺失结果。
-  触发条件：用户询问论文某一章节/子小节怎么写，或者需要撰写Abstract、Introduction、Method、Experiment、Ablation、Discussion‑Limitations、Conclusion、Rebuttal。
+  调整4：面向IEEE Trans投稿写作标准，强调严谨学术表达、叙事闭环、工程价值、可复现性、贡献可验证、局限坦诚、符号统一、图表自解释、引用符合IEEEtran格式。
+  触发条件：用户询问论文某一章节/子小节怎么写，或者需要撰写Abstract、Introduction、Problem Formulation、Method、Experiment、Ablation、Discussion‑Limitations、Conclusion、Rebuttal。
   输出固定三部分：
   1) Section‑Structure：该章节分段逻辑，每一段写作目标，段落数量，每段该讲什么；
   2) Writing‑Sample：对应IEEE风格英文学术示例文本，优先被动语态；
   3) Pitfall‑Notice：该章节高频踩坑点，禁止写法。
   强制约束：
-  1. 绝不编造用户未提供的创新点、实验数据、符号；全部依赖user_core_content输入；
+  1. 绝不编造用户未提供的创新点、实验数据、符号；全部依赖user_core_content输入；涉及结果时以当前工程实际结果为准；
   2. Introduction固定5段范式：业界痛点 → 现有研究文献综述 → 剖析现有方法固有机制缺陷 → 本文解法与优势 → 分条列举贡献；
   3. experimental_setup 范式：场景与现实挑战 → 数据集 → 评价指标 → Baselines → 实现与超参；与引言提出问题前后呼应；
   4. 严格区分段落功能，背景、文献综述、动机、方法、结果不能混写；
   5. Method禁止写实验结果；Experiment禁止大段复述算法原理；
   6. 必须按照本工程已经完成的实验结果撰写涉及结果的章节；结果缺失时先明确说明，不编造数据；
-  7. 输出不出现AI开场白，直接输出结构化内容。
+  7. Problem Formulation必须落地：定义输入、输出、优化目标、约束条件，必要时给出学习目标或任务目标；
+  8. IEEE Trans写作规范：优先被动语态；不使用空泛营销词；图表编号必须被正文引用；图注表注应自解释；引用统一使用IEEEtran/BibTeX格式；
+  9. 输出不出现AI开场白，直接输出结构化内容。
 parameters:
   type: object
   required:
@@ -29,6 +32,7 @@ parameters:
       enum:
         ["abstract",
          "introduction",
+         "problem_formulation",
          "method_overview",
          "method_module_detail",
          "experimental_setup",
@@ -40,6 +44,7 @@ parameters:
       description: >
         abstract：摘要
         introduction：引言（包含全部文献综述，无独立Related Work）
+        problem_formulation：问题定义与形式化建模
         method_overview：方法总览
         method_module_detail：方法子模块细节
         experimental_setup：实验设置（开篇描述现实挑战）
@@ -52,8 +57,11 @@ parameters:
       type: string
       description: >
         用户输入关键信息：创新点、模块名字、数据集、指标、待解决问题、已有主流方法、该任务现实挑战；如果当前工程已有实验结果，应优先提供或指向实际结果文件。
-        示例："创新点：schema指令去偏+类别平衡，解决LLM指令分布偏移；已有方法分为重采样、损失正则化两类；任务挑战：真实指令集类别不均衡、指令schema样式异构、高频类别主导训练数据；实验结果见本工程result/experiment_results.csv"
+        示例："创新点：schema指令去偏+类别平衡，解决LLM指令分布偏移；已有方法分为重采样、损失正则化两类；任务挑战：真实指令集类别不均衡、指令schema样式异构、高频类别主导训练数据；任务形式化：输入指令x与schema样式t，输出类别y，优化目标是加权指令分类损失；实际结果：Accuracy 91.7% vs best baseline 86.3%，macro-F1 87.2% vs 80.5%；实验结果见本工程result/experiment_results.csv"
   optional:
+    experiment_results_path:
+      type: string
+      description: "本工程已完成实验结果文件路径，例如 result/experiment_results.csv；不提供时技能先扫描当前工程目录。"
     target_journal:
       type: string
       default: "IEEE Trans"
@@ -64,200 +72,247 @@ parameters:
 examples:
   - input: |
       section_name: abstract
-      user_core_content: 研究问题：LLM指令微调存在类别分布偏移；方法：schema‑aware去偏模块+类别平衡训练策略；数据集：多模态指令数据集；指标Acc,F1；相比baseline获得显著提升；局限：小样本场景性能下降
+      user_core_content: 研究问题：LLM指令微调存在类别分布偏移；现有方法缺陷：重采样丢弃有效样本或产生重复噪声，损失正则化在指令schema异构时失效；方法：schema‑aware去偏模块+类别平衡训练策略；数据集：多模态指令数据集；实际结果：Accuracy 91.7%、macro-F1 87.2%，最优baseline为86.3%、80.5%；局限：小样本场景性能下降
       target_journal: TKDE
       language: en
     output: |
-      ## Section‑Structure（1个完整段落，浓缩4要素）
-      Para1: 研究背景→现存问题→本文提出方法→核心实验结果→简要局限与意义。
-      > 摘要不要分点，不要公式，不要引用文献，不要写未来工作。
+      ## Section‑Structure（4段逻辑；如期刊要求单段摘要，则压缩成一段，禁止分点罗列）
+      Para1: 领域现状与关键痛点，直接落到真实任务和部署场景；
+      Para2: 现有方法的具体短板，指出什么场景、什么假设下失效；
+      Para3: 本文完成的核心设计，写机制与能力边界，不堆砌模块名；
+      Para4: 实际量化收益与工程价值；可简述局限，不写未来工作。
 
       ## Writing‑Sample
-      Instruction tuning has become a mainstream paradigm for aligning large‑language models with human intentions. Nevertheless, imbalanced category distributions within instruction datasets lead to severe prediction bias toward high‑frequency categories. To address this issue, this paper proposes a schema‑aware debiasing module together with a category‑balance training strategy. The proposed approach regularizes instruction representations to mitigate distribution shift without discarding original training samples. Extensive experiments on multi‑modal instruction datasets demonstrate that our method achieves notable improvements in Accuracy and F1‑score compared with state‑of‑the‑art baselines. Nevertheless, the performance degrades under extremely small‑sample scenarios. This work provides a practical debiasing solution for instruction‑tuned large‑language models.
+      Instruction tuning has become a practical paradigm for aligning large language models with real-world instructions. In collected instruction datasets, however, category imbalance and heterogeneous schema styles cause the learned model to favor high-frequency categories and to underperform when instruction templates vary across deployments. Existing resampling-based methods discard informative samples or introduce duplicate noise, while loss-regularization methods fail when the same semantic instruction is expressed through inconsistent schemas. To address these limitations, this paper proposes a schema-aware debiasing module with explicit schema-consistency constraints and a category-balanced training strategy that preserves all original training samples. On a multi-modal instruction dataset, the proposed method improves Accuracy from 86.3% to 91.7% and macro-F1 from 80.5% to 87.2% over the best baseline. The method still shows clear performance degradation under extremely small-sample settings.
 
       ## Pitfall‑Notice
-      1. 不要堆砌大量细节、公式；
-      2. 不要只写方法，必须带上实验结果；
-      3. 不要写“本文结构如下”；
-      4. 不要写大量未来展望。
+      1. 不要写领域科普或泛泛背景，第一句必须进入具体问题；
+      2. 现有方法缺陷必须点明失效场景，不能只写“效果不好”；
+      3. 必须给出可验证的量化结果和对照基线，不能写“显著提升”但没有数字；
+      4. 只使用实际实验结果，未提供指标时不得编造；
+      5. 不要分点、不要公式、不要引用文献、不要写论文结构或大量未来工作。
 
   - input: |
       section_name: introduction
-      user_core_content: 创新点：schema指令去偏模块、类别平衡策略；问题：指令微调存在训练分布偏移，模型偏向高频类别，指令schema异构；已有方法分为重采样、损失正则化两类；数据集：多模态指令数据集
+      user_core_content: 任务：多模态指令分类；问题：指令微调存在训练分布偏移，模型偏向高频类别，真实指令schema异构；已有方法分为重采样、损失正则化两类，均未显式建模schema；本文完成：schema指令去偏模块、类别平衡策略、schema异构是主导偏差源的分析洞察；贡献分类：方法论贡献、训练策略贡献、分析洞察贡献
       target_journal: TKDE
       language: en
     output: |
       ## Section‑Structure（固定5段，顺序不可调换，所有文献综述放在本章，不单独开Related Work）
-      Para1: 阐述业界/领域真实痛点、落地瓶颈；只描述现实问题，不综述文献，不提本文方法。
-      Para2: 文献综述，梳理当前主流研究路线与已有方案，引用代表性参考文献，客观总结各类方法思路。
-      Para3: 剖析现有方法的**机制层面固有缺陷**，解释为什么现有方案无法根治Para1提出的痛点。
-      Para4: 阐述本文方法原生机制优势，精准对冲Para3的缺陷；说明为什么本方法可以解决该问题；禁止实验数值。
-      Para5: 分条列出本文核心贡献；贡献只写创新，不写实验效果；IEEE Trans标准分条格式。
+      Para1: 领域/工业界真实痛点与任务定义，说明输入、输出、分布特征和落地瓶颈；只描述现实问题，不综述文献，不提本文方法。
+      Para2: 文献综述，把相关工作按研究路线分组归类，引用代表性文献；每一组客观总结思路，不做逐篇复述。
+      Para3: 剖析现有方法的**机制层面固有缺陷**，点明其在哪些场景、哪些假设下失效；解释为什么现有方案无法根治Para1提出的痛点。
+      Para4: 阐述本文核心设计及其机制优势，精准对冲Para3的缺陷；说明每个设计解决哪个具体问题；禁止实验数值。
+      Para5: 列出3‑4条可验证贡献，按方法论/训练策略/分析洞察或实验贡献分类；末尾用一句交代全文组织结构，贡献不写“进行了大量实验”这类空话。
 
       ## Writing‑Sample
-      Para1: Recent large language models (LLMs) have achieved remarkable progress in instruction tuning and real‑world deployment. However, existing instruction learning paradigms inevitably suffer from unbalanced category distribution and heterogeneous instruction schemas in real collected datasets. Such inherent data bias leads to serious prediction preference, unstable generalization, and poor robustness in practical industrial scenarios, which severely limits the reliable deployment of instruction‑aligned models.
+      Para1: Recent large language models (LLMs) have achieved remarkable progress in instruction tuning and real‑world deployment. However, real instruction data are collected under unbalanced category distribution and heterogeneous schema styles. Given an instruction $x$ with its schema $t$, the model must predict a category $y$, yet high-frequency categories dominate training signals while diverse templates create inconsistent structural semantics. Such bias leads to unstable behavior and deployment failures in multi-modal instruction services.
 
-      Para2: To mitigate class‑imbalance bias in instruction tuning, considerable research efforts have been devoted to debiasing techniques. Resampling‑based approaches adjust sample occurrence frequency by oversampling minority samples or undersampling dominant categories [1]‑[3]. Another popular branch modifies loss functions to impose extra regularization constraints on model outputs for bias suppression [4]‑[6]. These two families constitute the mainstream debiasing pipelines for instruction fine‑tuning.
+      Para2: To mitigate class-imbalance bias in instruction tuning, existing methods mainly follow two research lines. Resampling-based approaches adjust sample frequency by oversampling minority samples or undersampling dominant categories [1]-[3]. Loss-regularization methods modify the training objective and impose output-level constraints for bias suppression [4]-[6]. These two families constitute the mainstream debiasing pipelines for instruction fine-tuning.
 
-      Para3: Nevertheless, existing approaches still suffer from fundamental limitations. Resampling strategies may discard valuable training samples or introduce noisy duplicates. Loss‑regularization methods operate only at output level and overlook structural semantics inside heterogeneous instruction templates. Neither of them explicitly models schema inconsistency across instructions, so they cannot fundamentally eliminate category bias under complex real‑world data distributions.
+      Para3: Nevertheless, existing approaches still suffer from mechanism-level limitations. Resampling strategies may discard valuable training samples or introduce noisy duplicates, and they assume bias can be corrected by frequency adjustment alone. Loss-regularization methods operate only on model outputs and therefore cannot model the structural inconsistency introduced by heterogeneous instruction schemas. When the same semantic instruction appears with varied templates, neither family explicitly separates schema shift from category imbalance, so they cannot guarantee stable debiasing under real-world distribution shift.
 
-      Para4: Different from previous heuristic correction pipelines, this paper proposes a schema‑aware debiasing framework combined with a category‑balanced training strategy. Instead of simply adjusting sample weights or loss terms, our method explicitly models instruction structural semantics and regularizes inconsistent schema representations. This mechanism fundamentally reduces distribution shift and alleviates category imbalance for real‑world instruction datasets.
+      Para4: Different from previous heuristic correction pipelines, this paper proposes a schema-aware debiasing framework combined with a category-balanced training strategy. The framework explicitly models structural semantics in heterogeneous instruction templates, so that category balancing is performed without discarding informative samples. This mechanism directly addresses the schema-level limitation of existing approaches and reduces distribution shift in real-world instruction datasets.
 
       Para5: The main contributions of this paper are summarized as follows:
-      1. We propose a novel schema‑aware debiasing module to model structural semantics of heterogeneous instructions, which effectively alleviates schema inconsistency bias in instruction tuning.
-      2. We design a category‑balanced training strategy to mitigate the over‑reliance of models on high‑frequency categories, improving generalization fairness on imbalanced datasets.
-      3. We conduct extensive experiments and ablation studies to verify the effectiveness and robustness of our method, showing superior performance compared with state‑of‑the‑art debiasing approaches.
+      1. We propose a schema-aware debiasing module that constructs explicit schema-consistency constraints, addressing the overlooked structural inconsistency in heterogeneous instruction templates.
+      2. We design a category-balanced training strategy that preserves the original training distribution while suppressing the over-reliance on high-frequency categories.
+      3. We analyze real instruction distributions and reveal that schema inconsistency is a dominant bias source that cannot be removed by output-level regularization alone.
+      The remainder of this paper is organized as follows. Section 2 formalizes the instruction debiasing problem. Section 3 presents the proposed framework. Experimental settings, results, and ablation studies are reported in Sections 4-6, followed by discussion and conclusions.
 
       ## Pitfall‑Notice
       1. Para1只写业界痛点，禁止文献、禁止本文方法；
       2. Para2完成全部文献综述，分类概括已有工作，**不要深度批判，只客观介绍路线**；
-      3. Para3必须解释机制层面的短板，不能只写“效果不好”；
+      3. Para3必须解释机制层面的短板，指出失效场景，不能只写“效果不好”；
       4. Para4逻辑闭环：本文优势一一对应Para3指出的缺陷；禁止出现实验指标；
-      5. Para5贡献必须分条罗列，不要大段文本；贡献描述写做了什么，不要写提升多少；
+      5. Para5贡献必须分条罗列，不要大段文本；贡献是“完成、设计、揭示”这类可验证内容，不是“研究了问题”或“进行了大量实验”；
       6. Introduction全文禁止实验数据、表格、消融结果、公式；
-      7. 全文不再出现独立Related Work章节，所有相关工作引用全部收拢在此处。
+      7. 全文不再出现独立Related Work章节，所有相关工作引用全部收拢在此处；
+      8. 贡献和后续Method/Experiment必须能一一对应，不能出现论文后面没有验证或没有实现的贡献；
+      9. 组织句不要写成“Section 2 reviews related work”，因为本文没有独立相关工作章节。
 
   - input: |
-      section_name: method_overview
-      user_core_content: 整体流水线：预训练LLM，输入指令，经过schema‑aware去偏模块，再接入类别平衡训练策略，输出模型；给出整体框架说明
+      section_name: problem_formulation
+      user_core_content: 任务：多模态指令分类；输入为指令文本x与schema样式t，输出为类别标签y；训练数据D呈现类别不均衡且schema异构；约束：不丢弃原始样本；目标：同时缓解类别分布偏移和schema不一致导致的预测偏差
       target_journal: TKDE
       language: en
     output: |
-      ## Section‑Structure（2段）
-      Para1: 整体框架总览，说明输入输出，流水线逻辑，对应图的文字描述；不展开公式。
-      Para2: 简要介绍各个子模块的分工，预告下一小节会详细展开每个模块。
+      ## Section‑Structure（3段）
+      Para1: 把应用问题落地成学习任务，给出输入、输出、样本空间和真实数据分布挑战；
+      Para2: 建立形式化符号体系，定义数据集、模型、类别、schema变量和主要假设；
+      Para3: 给出优化目标、约束条件与评价逻辑，说明为什么要同时建模类别分布和schema结构。
 
       ## Writing‑Sample
-      Para1: The overall pipeline of the proposed method is illustrated in Figure X. Given pre‑trained large‑language model, instruction inputs are first fed into the schema‑aware debiasing module. After representation regularization, the category‑balance training strategy is applied to optimize model parameters. The final aligned model is obtained after fine‑tuning.
-      Para2: In the following subsections, we elaborate on the schema‑aware debiasing module and the category‑balance training strategy in detail, including mathematical formulations and implementation details.
+      Para1: We formulate instruction debiasing as a supervised multi-modal instruction classification task. Each sample is an instruction text associated with a schema style, and the goal is to predict the intended category while remaining robust to both category imbalance and schema heterogeneity in real-world data.
+      Para2: Let $\mathcal X$ denote the instruction space, $\mathcal T$ denote the schema style space, and $\mathcal Y$ denote the category set. A training sample is represented as $(x_i,t_i,y_i)$, where $x_i\in\mathcal X$ is the instruction content, $t_i\in\mathcal T$ is the schema style, and $y_i\in\mathcal Y$ is the ground-truth category. The collected dataset $\mathcal D=\{(x_i,t_i,y_i)\}_{i=1}^{N}$ is imbalanced over $\mathcal Y$ and contains heterogeneous templates over $\mathcal T$.
+      Para3: Given a model $f_{\theta}:\mathcal X\times\mathcal T\mapsto\mathcal Y$, the training objective is formulated as
+      \[
+      \theta^*=\arg\min_{\theta}\ \mathcal L_{\text{task}}(\theta;\mathcal D)+\lambda \mathcal R_{\text{schema}}(\theta;\mathcal D)
+      \]
+      where $\mathcal L_{\text{task}}$ denotes the category-aware classification loss, $\mathcal R_{\text{schema}}$ penalizes representation inconsistency across heterogeneous schemas, and the optimization is constrained to preserve all original minority samples.
+
+      ## Pitfall‑Notice
+      1. 不要只写“分布偏移”这种宏大概念，必须定义输入、输出、样本和评价目标；
+      2. 所有符号第一次出现时必须给出定义，后续Method不能更换含义；
+      3. 这里不写实验结果，也不展开某个具体模块的全部细节；
+      4. 优化目标需要写清楚约束，避免读者无法复现损失函数和训练目标；
+      5. 问题形式化后要与Introduction痛点、Method模块一一对应。
+
+  - input: |
+      section_name: method_overview
+      user_core_content: 整体流水线：预训练LLM，输入指令与schema，经过schema‑aware去偏模块，再接入类别平衡训练策略，输出模型；设计动机：schema模块对应解决C1 schema异构偏差，类别平衡策略对应解决C2类别不均衡且不丢弃样本；需给出整体框架图说明
+      target_journal: TKDE
+      language: en
+    output: |
+      ## Section‑Structure（3段）
+      Para1: 先引用总架构图，说明输入输出、整体流水线和各阶段的数据流向；不展开公式。
+      Para2: 逐个说明子模块的职责与设计动机，明确指出每个模块对应解决前面提出的哪个挑战或缺陷。
+      Para3: 说明模块之间的协作顺序、训练推理关系，并预告后续消融如何验证这些设计假设。
+
+      ## Writing‑Sample
+      Para1: The overall pipeline of the proposed method is illustrated in Figure X. Given a pre-trained large language model, each instruction and its schema style are first encoded and passed to the schema-aware debiasing module. The regularized representations are then optimized by the category-balanced training strategy. The final aligned model is obtained after fine-tuning and can be used for instruction classification.
+      Para2: The schema-aware debiasing module is designed to address Challenge C1, where heterogeneous instruction schemas create inconsistent structural semantics. It regularizes representations according to shared schema patterns. The category-balanced training strategy is designed to address Challenge C2, suppressing the dominance of high-frequency categories without discarding any original training sample.
+      Para3: The two modules are jointly optimized in one framework. The schema module provides structure-aware representations, and the category-balanced objective uses those representations to improve minority-category decisions. Ablation studies in Section X will verify that each module contributes independently and that their combination yields the best performance.
 
       ## Pitfall‑Notice
       1. 不要在这里写公式、推导；公式放到method_module_detail；
       2. 不要写实验结果；
-      3. 不要把每个模块全部讲透，这里只做总览；
-      4. 一定要对应图的描述。
+      3. 每个模块都要先交代“解决什么问题”，不能直接抛出一堆模块名；
+      4. 总览必须对应图的描述，不能出现正文没引用或图里没有对应信息的模块；
+      5. 模块动机要能被后续消融实验验证，不能只讲结构不讲假设。
 
   - input: |
       section_name: method_module_detail
-      user_core_content: 两个子模块：schema‑aware debiasing module、category‑balance strategy；说明模块作用、数学形式、实现细节
+      user_core_content: 两个子模块：schema‑aware debiasing module、category‑balance strategy；schema模块解决schema异构；类别平衡策略不丢弃样本；符号体系：h_i为指令嵌入，h_schema为schema原型，w_c为类别权重，c为类别，y_c与yhat_c分别为真实与预测类别；训练总损失为任务损失、schema正则与类别平衡损失的加权和
       target_journal: TKDE
       language: en
     output: |
-      ## Section‑Structure（2‑3段，每个模块一段）
-      Para1: 第一个子模块：模块动机、数学定义、计算流程；
-      Para2: 第二个子模块：模块动机、数学定义、计算流程；
-      Para3: 可选：模块之间如何协同工作。
+      ## Section‑Structure（4段）
+      Para1: 先给形式化符号体系与模块设计动机，说明本节每个设计解决哪个已定义的问题；
+      Para2: 第一个子模块：动机→数学定义→计算流程→公式之后的自然语言解释；
+      Para3: 第二个子模块：动机→数学定义→计算流程→公式之后的自然语言解释；
+      Para4: 总损失与模块协同关系、训练阶段流程，并说明实现中的可复现细节。
 
       ## Writing‑Sample
-      Para1: The schema‑aware debiasing module aims to regularize instruction representations to mitigate schema‑level distribution bias. Given instruction embedding $\boldsymbol h_i$, we construct schema‑consistency constraints to penalize representations that deviate from shared instruction schema patterns. The regularization loss is formulated as:
+      Para1: We use $\boldsymbol h_i$ to denote the instruction embedding of sample $i$, $\boldsymbol h_{\text{schema}}$ to denote the aggregated schema prototype, $w_c$ to denote the category-specific weight, $y_c$ and $\hat y_c$ to denote the ground-truth and predicted one-hot labels of category $c$. The schema-aware debiasing module targets Challenge C1, while the category-balanced strategy targets Challenge C2.
+      Para2: The schema-aware debiasing module regularizes instruction representations to mitigate schema-level distribution bias. Given instruction embedding $\boldsymbol h_i$, we construct schema-consistency constraints to penalize representations that deviate from shared instruction schema patterns. The regularization loss is formulated as:
       \[
       \mathcal L_{\text{schema}}=\sum_{i}\|\boldsymbol h_i-\boldsymbol h_{\text{schema}}\|_2^2
       \]
-      where $\boldsymbol h_{\text{schema}}$ denotes the aggregated schema prototype.
-      Para2: The category‑balance strategy further adjusts training objective to counteract category imbalance. We introduce category‑weighted cross‑entropy loss to assign higher weights to minority categories. The weighted loss is computed as:
+      where $\boldsymbol h_{\text{schema}}$ denotes the aggregated schema prototype. This term encourages samples sharing the same semantic schema to remain close in representation space, thereby reducing variance caused by template-level differences.
+      Para3: The category‑balance strategy further adjusts training objective to counteract category imbalance. We introduce category‑weighted cross‑entropy loss to assign higher weights to minority categories. The weighted loss is computed as:
       \[
       \mathcal L_{\text{balance}}=-\sum_{c}w_c y_{c}\log(\hat y_{c})
       \]
-      where $w_c$ represents the category‑specific weight inversely proportional to sample frequency.
-      Para3: The total training loss is the weighted sum of the original task loss, schema regularization loss and category‑balance loss.
+      where $w_c$ represents the category-specific weight inversely proportional to sample frequency. In contrast to sample resampling, this strategy does not discard or duplicate samples and therefore preserves the original instruction data.
+      Para4: The total training loss is the weighted sum of the original task loss, schema regularization loss, and category-balanced loss. The modules share the same representation encoder and are optimized jointly during training.
 
       ## Pitfall‑Notice
       1. 只讲方法，**绝对不要出现实验结果、对比baseline**；
-      2. 符号定义必须写清楚；
-      3. 不要写训练参数；训练参数放到experimental_setup；
-      4. 不要大段讲故事，优先数学+实现逻辑。
+      2. 所有符号必须在首次出现时定义，并保证字体、下标含义与Problem Formulation一致；
+      3. 每个公式之后必须有自然语言解释，不能只堆公式；
+      4. 每个模块必须对应一个设计动机，并为后续Ablation提供待验证假设；
+      5. 不要写训练参数；训练参数放到experimental_setup；
+      6. 不要大段讲故事，优先数学+实现逻辑。
 
   - input: |
       section_name: experimental_setup
-      user_core_content: 任务挑战：真实指令集类别不均衡、指令schema样式异构、高频类别主导训练数据；数据集：多模态指令数据集；评价指标：Accuracy, F1‑score；baseline：重采样、损失正则化；训练超参：batch size、学习率、epoch；硬件环境
+      user_core_content: 任务挑战：真实指令集类别不均衡、指令schema样式异构、高频类别主导训练数据；数据集：120,000条多模态指令、68个类别、类别长尾比约21:1、按80/10/10划分；评价指标：Accuracy、macro-F1；baseline：按原始论文配置的重采样与损失正则化方法；训练超参：batch size 32、学习率5e-5、10 epochs；实现环境：PyTorch、NVIDIA A100、统一随机种子
       target_journal: TKDE
       language: en
     output: |
       ## Section‑Structure（4段，顺序不可调换；开篇描述任务现实挑战，与Introduction痛点呼应）
-      Para1: 描述本任务现实挑战，复现论文要解决的核心困难，说明为什么选用下述实验环境，建立和引言部分的叙事闭环；**不给出结果**。
-      Para2: 数据集介绍：数据集规模、任务类型、数据分布特征。
-      Para3: 评价指标、对比baseline列表，说明baseline来源与选取理由。
-      Para4: 训练配置：超参、硬件、实现环境。
+      Para1: 描述本任务现实挑战，复现论文要解决的核心困难，说明实验协议为什么保留真实不均衡和schema异构；**不给出结果**。
+      Para2: 数据集介绍：规模、任务类型、类别分布、schema分布、划分方式；给出保证公平评价所需的数据特性。
+      Para3: 评价指标、baseline分组与来源，说明每个baseline的版本、超参来源、为什么纳入对比；强调所有方法共用评价协议。
+      Para4: 训练配置：batch size、学习率、epoch、优化器、随机种子、硬件、框架；实现细节达到可复现程度。
 
       ## Writing‑Sample
-      Para1: Real‑world instruction tuning scenarios are confronted with two major challenges, namely imbalanced category distribution and heterogeneous instruction schemas. High‑frequency categories dominate training samples, while diverse instruction templates bring inconsistent structural semantics. A valid testbed should preserve such realistic characteristics so that we can fairly evaluate debiasing performance under practical conditions.
-      Para2: We conduct experiments on multi‑modal instruction datasets, which contain diverse instruction‑response pairs covering multiple categories. The dataset exhibits obvious category imbalance, where several high‑frequency categories dominate the training set, accompanied by heterogeneous instruction templates.
-      Para3: We adopt Accuracy and macro‑F1‑score as evaluation metrics. The compared baselines include resampling‑based debiasing and loss‑regularization debiasing approaches, which are representative state‑of‑the‑art methods for class‑imbalanced instruction tuning.
-      Para4: All models are fine‑tuned with batch size 32, learning rate $5\times10^{-5}$, and training epochs of 10. Experiments are implemented on NVIDIA A100 GPUs with PyTorch framework.
+      Para1: Real-world instruction tuning scenarios are confronted with imbalanced category distribution and heterogeneous instruction schemas. High-frequency categories dominate training samples, while diverse instruction templates introduce inconsistent structural semantics. To evaluate debiasing under practical conditions, our protocol deliberately preserves this distribution rather than rebalancing the testbed.
+      Para2: The experiments are conducted on a multi-modal instruction dataset containing 120,000 instruction-response pairs from 68 categories. The category distribution is highly skewed, with a long-tail ratio of approximately 21:1 between the largest and smallest categories. We split the data by 80/10/10 for training, validation, and testing and keep schema-style overlap between the training and test splits.
+      Para3: We adopt Accuracy and macro-F1-score as evaluation metrics. The baselines include resampling-based and loss-regularization debiasing methods, with configurations following their original papers. All methods are evaluated under the same data splits, evaluation code, and reported statistics.
+      Para4: All models are fine-tuned with batch size 32, learning rate $5\times10^{-5}$, and 10 epochs. Experiments are implemented in PyTorch and executed on NVIDIA A100 GPUs. Three random seeds are used, and the reported values are averaged over these seeds to reduce variance.
 
       ## Pitfall‑Notice
       1. Para1只阐述任务现实挑战，**禁止给出实验结果**，作用是承接引言动机；
-      2. 不要写实验结果；只写实验环境与配置；
-      3. 所有baseline简要说明，不要大段复述baseline算法；
-      4. 超参尽量写清楚；
-      5. 不要写“我们发现”这类结果语句。
+      2. 数据集必须写规模、任务类型、分布特征、划分方式和评估协议，不能只写名称；
+      3. baseline要说明来源、版本、超参和公平性，不能只列算法名；
+      4. 所有方法共用同一随机种子、数据划分、评价代码；不要隐瞒调参过程；
+      5. 不要写实验结果，也不要写“我们发现”这类结果语句。
 
   - input: |
       section_name: main_result
-      user_core_content: 对比多个baseline；本文方法在Acc、F1均取得最优；分析主要趋势；表格结果
+      user_core_content: 实际结果：本方法Accuracy 91.7%、macro-F1 87.2%；最优重采样baseline Accuracy 86.3%、macro-F1 80.5%；最优损失正则化baseline Accuracy 85.1%、macro-F1 81.3%；多数类表现接近，少数类与长尾类别提升最明显；极低资源场景提升有限；有失败样例：schema极度异构且语义含糊时仍误分类
       target_journal: TKDE
       language: en
     output: |
       ## Section‑Structure（2‑3段）
-      Para1: 总体结果概述，结合表格，说明整体性能；
-      Para2: 对比各个baseline，分析性能差异；
-      Para3: 可选：不同子任务上的表现差异。
+      Para1: 总体结果概述，引用Table X，用明确数字说明本方法在哪些指标上领先；
+      Para2: 对比各类baseline与不同场景：优势体现在哪里、哪些条件下提升有限或不如对方；不只做“全面最优”的概括；
+      Para3: 可选：子任务、参数敏感性、收敛性、案例可视化或失败样例分析；客观说明方法边界。
 
       ## Writing‑Sample
-      Para1: The main experimental results are summarized in Table X. Our proposed method achieves the best performance in terms of Accuracy and macro‑F1‑score among all competing approaches.
-      Para2: Compared with resampling‑based baselines, our approach yields obvious performance gains. Regularization‑based methods also lag behind our method, which demonstrates the effectiveness of schema‑aware representation regularization.
-      Para3: We further observe that our method maintains stable performance across different sub‑tasks, showing strong generalization capability under imbalanced instruction distributions.
+      Para1: The main experimental results are summarized in Table X. The proposed method achieves an Accuracy of 91.7% and a macro-F1 of 87.2%, outperforming the best resampling-based baseline by 5.4 and 6.7 points, respectively, and the best loss-regularization baseline by 6.6 and 5.9 points.
+      Para2: The improvements are most pronounced on minority and long-tail categories, where schema-aware regularization reduces errors caused by heterogeneous templates. On majority categories, the proposed method performs comparably to the baselines rather than obtaining an additional gain. In extremely low-resource categories, the improvement is limited, and the method does not always outperform a simpler resampling baseline when the number of training samples is very small.
+      Para3: Failure analysis further indicates that the remaining errors mainly occur when an instruction contains highly ambiguous wording and a rarely seen schema. Such cases are not fully resolved by representation regularization, which suggests a clear boundary of the proposed approach.
 
       ## Pitfall‑Notice
       1. 不要在这里复述算法原理；
-      2. 不要堆砌一堆数字，重点总结趋势；
-      3. 不要写消融实验；消融放到ablation_study；
-      4. 不要过度夸大，客观描述提升。
+      2. 不能只放表格，必须解释“在哪些场景有效、在哪些场景无效”；
+      3. 必须使用实际实验数字，不能把“提升明显”当作结论；
+      4. 不要只挑对自己有利的指标，应报告主要、少数类、长尾类及失败案例；
+      5. 不要写消融实验；消融放到ablation_study；
+      6. 避免“novel”“state-of-the-art”等空泛词，用结果支撑判断。
 
   - input: |
       section_name: ablation_study
-      user_core_content: 两个模块：schema去偏、类别平衡；指标Acc,F1；去掉任一模块性能下降
+      user_core_content: 实际消融：full model Accuracy 91.7、macro-F1 87.2；去掉schema模块Accuracy 87.9、macro-F1 82.0；去掉类别平衡Accuracy 89.4、macro-F1 83.5；两个模块都去掉Accuracy 85.1、macro-F1 79.4；验证假设：schema模块负责消除schema异构偏差，类别平衡负责缓解高频类别主导
       language: en
     output: |
       ## Section‑Structure（3段）
-      Para1: 消融实验目的，说明变体模型构造；
-      Para2: 分析表格趋势：移除各个模块带来的性能变化；
-      Para3: 总结：各个模块贡献，模块之间互补关系。
+      Para1: 消融实验目的，说明变体构造，并把每类变体对应到Method中提出的设计假设；
+      Para2: 引用表格并逐组分析：移除某个模块带来什么变化，印证哪个设计动机，而不是简单罗列下降幅度；
+      Para3: 总结各模块贡献及其互补关系，说明full model为什么是合理组合。
 
       ## Writing‑Sample
-      Para1: Ablation experiments are carried out to quantify the contribution of each key component. Several model variants are constructed by disabling the schema‑aware debiasing module and category‑balance strategy respectively.
-      Para2: As observed from the experimental table, removing the schema‑aware debiasing yields a noticeable drop in Accuracy and F1‑score. Further performance degradation occurs when the category‑balance strategy is excluded. The full model achieves the best overall performance.
-      Para3: These observations demonstrate that both components are essential, and they provide complementary benefits for alleviating instruction distribution bias.
+      Para1: Ablation experiments are carried out to verify the two design hypotheses introduced in Section 3. We construct four variants: the full model, the model without the schema-aware debiasing module, the model without the category-balanced strategy, and the model without both components.
+      Para2: As reported in Table X, removing the schema-aware module reduces Accuracy from 91.7% to 87.9% and macro-F1 from 87.2% to 82.0%, confirming that schema consistency is necessary under heterogeneous instruction templates. Removing the category-balanced strategy reduces Accuracy to 89.4% and macro-F1 to 83.5%, confirming that the strategy suppresses the dominance of high-frequency categories. When both components are removed, performance drops to 85.1% and 79.4%.
+      Para3: The results show that the two components target complementary bias sources. The schema module mainly improves representation stability, while the category-balanced strategy primarily improves minority-category decisions. Their combination provides the best and most balanced performance.
 
       ## Pitfall‑Notice
       1. 不要重新复述算法推导；
-      2. 不要和外部baseline做大规模对比；消融只验证自己内部模块；
-      3. 避免模糊词汇“提升很大”，描述性能变化趋势；
-      4. 不要引入新的实验。
+      2. 每一组消融必须对应一个明确的设计假设，不能为了凑表而做；
+      3. 必须写明去掉模块前后的实际数值，不能只写“明显下降”；
+      4. 不要和外部baseline做大规模对比；消融只验证自己内部模块；
+      5. 消融应沿用同一数据划分、随机种子和评价协议；
+      6. 不要引入新的实验。
 
   - input: |
       section_name: discussion_limitations
-      user_core_content: 局限：小样本数据集性能下降；复杂schema泛化能力有限；未来方向：增强schema表示、跨领域迁移
+      user_core_content: 实验解释：schema正则通过降低模板变化带来的表征分散，使少数类决策更稳定；局限：小样本类别性能下降、复杂schema泛化有限；失效条件：类别样本极少或schema高度含糊；未来方向：增强schema表示、跨领域迁移
       target_journal: TKDE
       language: en
     output: |
-      ## Section‑Structure（2段）
-      Para1: 讨论：对实验现象做深度解读，解释为什么会出现该结果；
-      Para2: 客观陈述局限性，再给出未来工作方向。
+      ## Section‑Structure（3段）
+      Para1: 对关键实验现象做机制解释：为什么方法在这些条件下有效，为什么某些条件下提升有限；
+      Para2: 客观陈述方法固有局限，明确指出哪些假设一旦不成立性能会退化；
+      Para3: 给出未来拓展方向，只做方向展望，不写未验证的新方案。
 
       ## Writing‑Sample
-      Para1: The experimental results indicate that schema‑aware regularization can effectively mitigate instruction‑level bias under moderate‑to‑large training data. The category‑balance strategy further stabilizes model prediction across imbalanced categories.
-      Para2: Nevertheless, our method has several limitations. The performance degrades under extremely small‑sample scenarios, and generalization over highly complex instruction schemas remains insufficient. In future work, we intend to enhance schema representation learning and explore cross‑domain transfer for instruction debiasing.
+      Para1: The experimental results indicate that schema-aware regularization reduces the representation variance caused by template-level differences, which helps the classifier rely on semantic instruction content rather than surface schema patterns. The category-balanced strategy further stabilizes decisions on minority categories by preventing high-frequency categories from dominating the training signal.
+      Para2: Nevertheless, the method has intrinsic limitations. When a minority category contains very few samples, the schema prototype and category weights become less reliable, and performance degrades. The method also assumes that schema styles can be represented by shared structural patterns; when schemas are highly ambiguous or radically different across domains, this assumption may no longer hold.
+      Para3: In future work, we intend to strengthen schema representation with contextualized schema modeling and explore cross-domain transfer so that the framework remains effective when categories, templates, and domains change together.
 
       ## Pitfall‑Notice
       1. 不要回避缺点；不能只写优点；
-      2. 不要写全新的方法；未来工作只做方向展望；
-      3. 不要重复前面实验结果；做深度解读；
-      4. 不要写“本工作完美解决XX问题”。
+      2. 局限要写清楚“哪个假设失效会导致性能退化”，不能只重复“效果不好”；
+      3. 不要写全新的方法；未来工作只做方向展望；
+      4. 不要重复前面实验结果；做机制层面的深度解读；
+      5. 不要写“本工作完美解决XX问题”。
 
   - input: |
       section_name: conclusion
-      user_core_content: 本文提出schema‑aware去偏模块+类别平衡策略；解决指令微调分布偏移；实验验证有效性；展望
+      user_core_content: 本文提出schema‑aware去偏模块+类别平衡策略；解决指令微调分布偏移；已完成实验结果：Accuracy 91.7%、macro-F1 87.2%；展望：扩展到复杂多模态与跨领域场景
       target_journal: TKDE
       language: en
     output: |
@@ -266,12 +321,12 @@ examples:
       Para2: 简短展望，不要长篇大论。
 
       ## Writing‑Sample
-      Para1: In this paper, we address the instruction distribution bias problem in large‑language‑model instruction tuning. We propose a schema‑aware debiasing module and a category‑balance training strategy to mitigate category imbalance. Extensive experiments verify the effectiveness of the proposed approach.
+      Para1: In this paper, we address the instruction distribution bias problem in large-language-model instruction tuning. We propose a schema-aware debiasing module and a category-balanced training strategy to mitigate category imbalance. On the completed multi-modal instruction experiments, the proposed method achieves 91.7% Accuracy and 87.2% macro-F1, confirming that schema-aware representation regularization and category-balanced optimization jointly improve minority-category decisions.
       Para2: In the future, we will extend our debiasing framework to more complex multi‑modal scenarios.
 
       ## Pitfall‑Notice
       1. 不要新增任何实验结果；
-      2. 不要大段复述实验细节；
+      2. 可以概括关键量化结果，但不要大段复述实验细节或表格；
       3. 不要写大量未来工作；简短即可；
       4. 不要引入新的创新点。
 
@@ -291,8 +346,8 @@ examples:
       Response to Reviewer X:
       We appreciate the constructive comments. We have carefully revised the manuscript according to your suggestions.
 
-      Point 1: The reviewer suggests that the comparison with the latest state‑of‑the‑art baselines is insufficient.
-      Response: We have supplemented additional SOTA baselines in the experimental section and updated the corresponding table. The new results are presented in Section 4.
+      Point 1: The reviewer suggests that the comparison with recent strong baselines is insufficient.
+      Response: We have supplemented additional strong baselines in the experimental section and updated the corresponding table. The new results are presented in Section 4.
 
       Point 2: The reviewer concerns about the performance under small‑sample settings.
       Response: We have supplemented detailed discussion about the small‑sample limitation in Section 5. We clearly state the performance degradation under extremely limited training data.

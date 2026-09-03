@@ -1,6 +1,18 @@
 # paper-writer-v2-full
 
-IEEE/SCI 论文分章节指导与写作生成技能。用于撰写或指导 Abstract、Introduction、Method、Experiment、Ablation、Discussion-Limitations、Conclusion、Rebuttal 等章节。所有文献综述统一整合在 Introduction 内部，不再单独设置 Related Work；Experimental Setup 从现实挑战开篇并与引言形成叙事闭环。
+IEEE/SCI 论文分章节指导与写作生成技能。用于撰写或指导 Abstract、Introduction、Problem Formulation、Method、Experiment、Ablation、Discussion-Limitations、Conclusion、Rebuttal 等章节。技能面向 IEEE Trans 投稿要求，强调严谨学术表达、叙事闭环、工程价值、可复现性和期刊范式。
+
+## 写作优化要点
+
+- 所有文献综述统一整合在 Introduction 内部，不再单独设置 Related Work；
+- Experimental Setup 从现实挑战开篇，并与 Introduction 形成叙事闭环；
+- Abstract 按“具体痛点 → 现有方法失效场景 → 本文工作 → 量化结果与价值”组织；
+- Introduction 给出 3-4 条可验证贡献，并在末尾简要说明全文结构；
+- 新增 Problem Formulation，形式化输入、输出、优化目标、约束和符号体系；
+- Method 必须先给总体架构图，再展开模块；公式前后必须给出动机和自然语言解释；
+- Experiments 强调公平可复现，结果不只列表格，还要解释有效场景、有限提升和失败样例；
+- 消融每一组都要对应一个设计假设，Discussion 必须坦诚报告固有局限；
+- 整体采用被动、客观学术表达，不使用营销化形容词；图表必须被正文引用且图注表注自解释。
 
 ## 在 Codex 中安装
 
