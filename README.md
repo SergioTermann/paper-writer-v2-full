@@ -1,6 +1,6 @@
 # paper-writer-v2-full
 
-IEEE/SCI 论文分章节指导与写作生成 skill。用于撰写或指导 Abstract、Introduction、Related Work、Method、Experiment、Ablation、Discussion-Limitations、Conclusion、Rebuttal。
+IEEE/SCI 论文分章节指导与写作生成 skill。用于撰写或指导 Abstract、Introduction、Method、Experiment、Ablation、Discussion-Limitations、Conclusion、Rebuttal。所有文献综述整合在 Introduction 内部，不再单独设置 Related Work；Experimental Setup 从现实挑战开篇并与引言形成叙事闭环。
 
 ## Install for Codex
 
