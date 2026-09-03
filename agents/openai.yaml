@@ -1,4 +1,4 @@
 interface:
   display_name: "Paper Writer v2 Full"
   short_description: "IEEE/SCI section writing with structure, samples, pitfalls"
-  default_prompt: "Use $paper_writer_v2_full to write the introduction section based on the provided core content."
+  default_prompt: "Use $paper_writer_v2_full to write a paper section from the project's completed experiment results and the provided core content."

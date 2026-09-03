@@ -40,6 +40,8 @@ git clone https://github.com/SergioTermann/paper-writer-v2-full.git \
 
 提供 `section_name` 和 `user_core_content`。可选输入为 `target_journal` 和 `language`。
 
+如果需要“按照本工程已经完成的实验结果撰写论文”，必须先以当前工程中的实验结果、表格、日志或报告为准，再生成相应章节；缺失结果不得编造。
+
 技能会按顺序输出以下三部分：
 
 1. `Section-Structure`

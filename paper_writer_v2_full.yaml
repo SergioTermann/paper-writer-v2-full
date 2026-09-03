@@ -4,6 +4,7 @@ description: >
   IEEE/SCI论文分章节指导+写作生成技能。
   调整1：不再设置独立Related Work章节，全部前人研究、参考文献综述直接整合在Introduction内部。
   调整2：experimental_setup 开头增加现实挑战描述，实验部分先呼应论文提出的真实问题与挑战，再展开数据集、指标、基线、训练配置，与Introduction形成叙事闭环。
+  调整3：若用户指定“按照本工程已经完成的实验结果撰写论文”，必须先读取当前工程中的实验结果、表格、日志或报告，并严格依据这些已完成实验撰写正文；不得虚构或补全缺失结果。
   触发条件：用户询问论文某一章节/子小节怎么写，或者需要撰写Abstract、Introduction、Method、Experiment、Ablation、Discussion‑Limitations、Conclusion、Rebuttal。
   输出固定三部分：
   1) Section‑Structure：该章节分段逻辑，每一段写作目标，段落数量，每段该讲什么；
@@ -15,7 +16,8 @@ description: >
   3. experimental_setup 范式：场景与现实挑战 → 数据集 → 评价指标 → Baselines → 实现与超参；与引言提出问题前后呼应；
   4. 严格区分段落功能，背景、文献综述、动机、方法、结果不能混写；
   5. Method禁止写实验结果；Experiment禁止大段复述算法原理；
-  6. 输出不出现AI开场白，直接输出结构化内容。
+  6. 必须按照本工程已经完成的实验结果撰写涉及结果的章节；结果缺失时先明确说明，不编造数据；
+  7. 输出不出现AI开场白，直接输出结构化内容。
 parameters:
   type: object
   required:
@@ -49,8 +51,8 @@ parameters:
     user_core_content:
       type: string
       description: >
-        用户输入关键信息：创新点、模块名字、数据集、指标、待解决问题、已有主流方法、该任务现实挑战。
-        示例："创新点：schema指令去偏+类别平衡，解决LLM指令分布偏移；已有方法分为重采样、损失正则化两类；任务挑战：真实指令集类别不均衡、指令schema样式异构、高频类别主导训练数据"
+        用户输入关键信息：创新点、模块名字、数据集、指标、待解决问题、已有主流方法、该任务现实挑战；如果当前工程已有实验结果，应优先提供或指向实际结果文件。
+        示例："创新点：schema指令去偏+类别平衡，解决LLM指令分布偏移；已有方法分为重采样、损失正则化两类；任务挑战：真实指令集类别不均衡、指令schema样式异构、高频类别主导训练数据；实验结果见本工程result/experiment_results.csv"
   optional:
     target_journal:
       type: string
