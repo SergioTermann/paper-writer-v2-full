@@ -6,7 +6,7 @@ IEEE/SCI 论文分章节指导与写作生成技能。用于撰写或指导 Abst
 
 - 所有文献综述统一整合在 Introduction 内部，不再单独设置 Related Work；
 - Experimental Setup 从现实挑战开篇，并与 Introduction 形成叙事闭环；
-- Abstract 按“具体痛点 → 现有方法失效场景 → 本文工作 → 量化结果与价值”组织；
+- Abstract 按“具体痛点 → 现有方法失效场景 → 本文工作 → 贡献与意义”组织，不要堆叠数据结果，最多保留一个关键量化结果；
 - Introduction 给出 3-4 条可验证贡献，并在末尾简要说明全文结构；
 - 新增 Problem Formulation，形式化输入、输出、优化目标、约束和符号体系；
 - Method 必须先给总体架构图，再展开模块；公式前后必须给出动机和自然语言解释；

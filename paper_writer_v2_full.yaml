@@ -1,5 +1,5 @@
 name: paper_writer_v2_full
-version: "2.5.0"
+version: "2.5.1"
 description: >
   IEEE/SCI论文分章节指导+写作生成技能。
   调整1：不再设置独立Related Work章节，全部前人研究、参考文献综述直接整合在Introduction内部。
@@ -20,7 +20,8 @@ description: >
   6. 必须按照本工程已经完成的实验结果撰写涉及结果的章节；结果缺失时先明确说明，不编造数据；
   7. Problem Formulation必须落地：定义输入、输出、优化目标、约束条件，必要时给出学习目标或任务目标；
   8. IEEE Trans写作规范：优先被动语态；不使用空泛营销词；图表编号必须被正文引用；图注表注应自解释；引用统一使用IEEEtran/BibTeX格式；
-  9. 输出不出现AI开场白，直接输出结构化内容。
+  9. Abstract以贡献和意义为主，不要大量堆叠数据结果；如需量化证据，最多保留1个最关键结果；
+  10. 输出不出现AI开场白，直接输出结构化内容。
 parameters:
   type: object
   required:
@@ -80,17 +81,18 @@ examples:
       Para1: 领域现状与关键痛点，直接落到真实任务和部署场景；
       Para2: 现有方法的具体短板，指出什么场景、什么假设下失效；
       Para3: 本文完成的核心设计，写机制与能力边界，不堆砌模块名；
-      Para4: 实际量化收益与工程价值；可简述局限，不写未来工作。
+      Para4: 贡献与工程意义为主；如需量化证据，最多保留1个最关键结果；可简述局限，不写未来工作。
 
       ## Writing‑Sample
-      Instruction tuning has become a practical paradigm for aligning large language models with real-world instructions. In collected instruction datasets, however, category imbalance and heterogeneous schema styles cause the learned model to favor high-frequency categories and to underperform when instruction templates vary across deployments. Existing resampling-based methods discard informative samples or introduce duplicate noise, while loss-regularization methods fail when the same semantic instruction is expressed through inconsistent schemas. To address these limitations, this paper proposes a schema-aware debiasing module with explicit schema-consistency constraints and a category-balanced training strategy that preserves all original training samples. On a multi-modal instruction dataset, the proposed method improves Accuracy from 86.3% to 91.7% and macro-F1 from 80.5% to 87.2% over the best baseline. The method still shows clear performance degradation under extremely small-sample settings.
+      Instruction tuning has become a practical paradigm for aligning large language models with real-world instructions. In collected instruction datasets, however, category imbalance and heterogeneous schema styles cause the learned model to favor high-frequency categories and to underperform when instruction templates vary across deployments. Existing resampling-based methods discard informative samples or introduce duplicate noise, while loss-regularization methods fail when the same semantic instruction is expressed through inconsistent schemas. To address these limitations, this paper proposes a schema-aware debiasing module with explicit schema-consistency constraints and a category-balanced training strategy that preserves all original training samples. This design contributes a structure-aware mechanism for real instruction pipelines and provides a sample-preserving way to improve minority-category decisions. On a multi-modal instruction dataset, the proposed method improves Accuracy by 5.4 points over the best baseline. These results indicate that the framework can enhance practical reliability of instruction-tuned large language models under realistic category and schema distributions.
 
       ## Pitfall‑Notice
       1. 不要写领域科普或泛泛背景，第一句必须进入具体问题；
       2. 现有方法缺陷必须点明失效场景，不能只写“效果不好”；
-      3. 必须给出可验证的量化结果和对照基线，不能写“显著提升”但没有数字；
-      4. 只使用实际实验结果，未提供指标时不得编造；
-      5. 不要分点、不要公式、不要引用文献、不要写论文结构或大量未来工作。
+      3. 摘要不要大量堆叠Accuracy、F1、baseline等数据，应把主要篇幅用于贡献和意义；
+      4. 如需量化证据，最多保留1个最关键结果，不能把摘要写成压缩版结果表；
+      5. 只使用实际实验结果，未提供指标时不得编造；
+      6. 不要分点、不要公式、不要引用文献、不要写论文结构或大量未来工作。
 
   - input: |
       section_name: introduction

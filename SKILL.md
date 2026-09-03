@@ -3,7 +3,7 @@ name: paper-writer-v2-full
 description: >
   IEEE/SCI论文分章节指导与写作生成技能。用于当用户询问论文某一章节或子小节怎么写，或需要撰写 Abstract、Introduction、Method、Experiment、Ablation、Discussion-Limitations、Conclusion、Rebuttal 时。
   不再设置独立 Related Work：所有前人研究与参考文献综述直接整合在 Introduction 内部；Experimental Setup 以现实挑战开篇，先回应论文问题，再展开数据、指标、基线和训练配置。
-  遵循 IEEE Trans 投稿写作规范：Abstract 必须有具体缺陷与量化结果；Introduction 贡献必须清晰可验证；Problem Formulation 需要形式化输入输出与优化目标；Method 需要图、符号一致性；Experiments 需要公平可复现并诚实报告局限；整体避免 AI 腔和营销化形容词。
+  遵循 IEEE Trans 投稿写作规范：Abstract 以具体缺陷、贡献和意义为主，最多保留一个关键量化结果而不堆叠数据；Introduction 贡献必须清晰可验证；Problem Formulation 需要形式化输入输出与优化目标；Method 需要图、符号一致性；Experiments 需要公平可复现并诚实报告局限；整体避免 AI 腔和营销化形容词。
   当用户要求按照本工程已经完成的实验结果撰写论文时，必须先读取当前工程中的实验结果、表格、日志或报告，并以这些实际结果为准；不得虚构或补全缺失数据。
   输出固定三部分：Section-Structure、Writing-Sample、Pitfall-Notice。
   不编造用户未提供的创新点、实验数据、符号，只依据 user_core_content；严格区分背景、动机、方法、结果；Method 不写实验结果，Experiment 不复述算法原理；不输出 AI 开场白，直接输出结构化内容。
@@ -41,7 +41,7 @@ Use `paper_writer_v2_full.yaml` as the authoritative configuration. The required
 
 ## IEEE Trans Section Quality
 
-- **Abstract**: follow a four-part logic: concrete pain point, specific failure of existing methods, what this work does, quantified result/value. Do not substitute metrics with “significant improvement.”
+- **Abstract**: follow a four-part logic: concrete pain point, specific failure of existing methods, what this work does, contribution/value. Emphasize contributions and significance; keep at most one key quantified result and do not turn the abstract into a results table.
 - **Introduction**: use the fixed five-paragraph structure from `paper_writer_v2_full.yaml`; all literature review belongs here; end with 3-4 verifiable contributions and a brief paper organization.
 - **Problem Formulation**: define input, output, optimization objective, constraints, and notation.
 - **Method**: start from the overall figure, explain module motivations before formulas, explain formulas after presenting them, and leave hyperparameters/experimental settings to Experiment.
